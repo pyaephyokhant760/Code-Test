@@ -25,6 +25,7 @@ php artisan key:generate
 ```
  php artisan db:seed --class=UserSeeder
  php artisan db:seed --class=CompanySeeder
+ php artisan db:seed --class=EmployeeSeeder
 ```
 
 # test api in postman
