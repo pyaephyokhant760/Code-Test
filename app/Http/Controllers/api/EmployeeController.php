@@ -4,8 +4,6 @@ namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -50,6 +48,8 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|max:255',
             'phone' => 'required|string|max:255',
+            'position' => 'required|string|max:255',
+            'salary' => 'required|string|max:255',
             'profile' => 'required|mimes:jpg,png,jpeg|max:10240',
         ]);
         if ($validatedData->fails()) {
@@ -62,7 +62,7 @@ class EmployeeController extends Controller
         $data = $validatedData->validated();
         if($request->hasFile('profile')) {
             $fileName = uniqid() . $request->file('profile')->getClientOriginalName();
-            $request->file('profile')->storeAs('public/logo',$fileName);
+            $request->file('profile')->storeAs('public/profile',$fileName);
             $data['profile'] = $fileName;
         }
 
@@ -96,8 +96,8 @@ class EmployeeController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $company = Employee::find($id);
-        if (!$company) {
+        $employee = Employee::find($id);
+        if (!$employee) {
             return response()->json([
                 'message' => "Employee not found",
             ], 400);
@@ -108,6 +108,8 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:employees,email,' . $id,
             'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'position' => 'required|string',
+            'salary' => 'required|string',
             'phone' => 'required|string',
         ]);
 
@@ -119,45 +121,25 @@ class EmployeeController extends Controller
             ], 422);
         }
 
-        $validatedData = $validator->validated();
+        $data = $validator->validated();
 
         // Check if a new logo is uploaded
-        if ($request->hasFile('profile')) {
-            // Delete the old logo if it exists
-            if ($company->logo && Storage::disk('public')->exists($company->logo)) {
-                Storage::disk('public')->delete($company->logo);
-            }
+        if($request->hasFile('profile')){
+            Storage::disk('public')->delete('profile/' . $employee->profile);
 
-            // Handle new logo upload and resizing
-            $imageFile = $request->file('profile');
-            $fileName = uniqid() . '_' . $imageFile->getClientOriginalName();
-
-            // Create image manager with GD driver
-            $manager = new ImageManager(new Driver());
-
-            // Make image from file and resize
-            $image = $manager->read($imageFile->getRealPath());
-
-            // Resize image to 300px width, keeping aspect ratio
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
-
-            // Save the resized image to storage
-            $image->save(storage_path("app/public/{$fileName}"));
-
-            // Update logo filename in the database
-            $validatedData['logo'] = $fileName;
+            // save new image1
+            $fileName = uniqid() . $request->file('profile')->getClientOriginalName();
+            $request->file('profile')->storeAs('public/profile',$fileName);
+            $data['profile'] = $fileName;
         }
 
         // Update the company with validated data
-        $company->update($validatedData);
+        $employee->update($data);
 
         return response()->json([
             'status' => true,
             'message' => 'Employee updated successfully',
-            'data' => $company
+            'data' => $employee
         ], 200);
     }
 
@@ -173,10 +155,10 @@ class EmployeeController extends Controller
             $dbImage = $dbImage->image_path;
 
             if ($dbImage != null) {
-                Storage::disk('public')->delete($dbImage);
+                Storage::disk('public')->delete('profile/' . dbImage);
             }
-            $update = Employee::where('id', $id)->delete();
-            return response()->json(['message' => 'Delete successfully'], 201);
+            $delete = Employee::where('id', $id)->delete();
+            return response()->json(['message' => 'Delete successfully'], 200);
         }
         return response()->json(["Status" => false, "Message" => "Have's Id"], 200);
     }

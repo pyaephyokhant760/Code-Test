@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('email');
             $table->string('phone');
             $table->string('profile');
+            $table->string('position');
+            $table->string('salary');
             $table->timestamps();
         });
     }
